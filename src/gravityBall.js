@@ -298,9 +298,10 @@ function createGUI(){
     ball.add(player,"mass",0,100000);
     ball.add(player,"speedX",-1000,1000).listen();
     ball.add(player,"speedY",-1000,1000).listen();
+    ball.open();
     gui.add(controls,"particleNum",0).onChange(e => particleFactory());
     gui.add(controls,"speedLimit",0);
-    gui.add(controls,"colorSpeedRatio",0,1);
+    gui.add(controls,"colorSpeedRatio",0,2);
     gui.add(controls,"clean");
     gui.add(controls,"clear");
     gui.add(controls,"randomize");
