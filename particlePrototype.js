@@ -2,13 +2,11 @@ var myCanvas = document.getElementById("canV"),
 ctx = null,
 particleArray = [];
 
-var Particle = function(){
-    this.x = myCanvas.width/2+1,
-    this.y = myCanvas.height/2-1,
-    this.r = 2.5,
+var particle = function(){
+    this.x = Math.random()*myCanvas.width,
+    this.y = Math.random()*myCanvas.height,
+    this.r = 1.5,
     this.numParticles = 10,
-    this.ratio = 1/2,   
-    this.axis = "y", 
     this.speedX = 0,
     this.speedY = 0,
     this.mass = 50,    
@@ -28,6 +26,37 @@ var player = {
     //drawCircle: drawBall,
     //boundary: boundaryChecker
 };
+
+gravityWellArray = [];
+
+var gravityWell = function(x,y){
+    this.x = x;
+    this.y = y;
+    this.r = 4;
+    this.mass = 1000;
+    this.color = "black";
+}
+
+gravityWell.prototype = {
+    drawBall:function(){
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+    },
+    randomPosition:function(){
+        this.x = Math.random()*myCanvas.width;
+        this.y = Math.random()*myCanvas.height;
+    }
+}
+
+function createGravitywell(event){
+    var rect = myCanvas.getBoundingClientRect();
+    var mouseX = event.clientX - rect.left;
+    var mouseY = event.clientY - rect.top;
+    var gravityWell = new gravityWell(mouseX,mouseY);
+    gravityWellArray.push(gravityWell);
+}
 
 Particle.prototype = {
     calculateOrbitSpeed: function(delta) {
