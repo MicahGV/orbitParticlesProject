@@ -197,7 +197,7 @@ window.onload = function(){
         ball.add(player,"speedX",-1000,1000).listen();
         ball.add(player,"speedY",-1000,1000).listen();
         gui.add(controls,"clear");
-        gui.add(controls,"particleNum").;
+        //gui.add(controls,"particleNum");
         gui.close();
         mainLoop();
     }
