@@ -2,7 +2,7 @@
 var myCanvas = document.getElementById("canV"),
     gameAreaId = document.getElementById("gameArea"),
     ctx = null,
-    lastTime = (new Date().getTime()),
+    lastTime = performance.now(),
     currentTime = 0,
     requestId,
     paused = false,
@@ -22,27 +22,23 @@ myCanvas.height = window.innerHeight*.95;
 888       888 8888888 "Y8888P"   "Y8888P" 
  */
 
-function newGradient() {
-    var c1 = {
-        r: Math.floor(Math.random()*255),
-        g: Math.floor(Math.random()*255),
-        b: Math.floor(Math.random()*255)
-    };
-    return 'rgb('+c1.r+','+c1.g+','+c1.b+')';
-}
-
-
 var controls = {
     clean:function(){
         ctx.clearRect(0,0,myCanvas.width,myCanvas.height);
     },
-    clear:function(){gravityWellArray.length = 1;},
+    clear:function(){
+        gravityWellArray.length = 1;
+        emitterArray.length = 0;
+    },
     particleNum: 200,
     speedLimit:20,
     colorSpeedRatio:0.10,
+    particleMax:100,
     randomize:function(){
         for(let i = 0; i < particleArray.length;i++){
-        particleArray[i].randomPosition();
+            particleArray[i].speedX = 0;
+            particleArray[i].speedY = 0;            
+            particleArray[i].randomPosition();
         }
         for(let k = 1; k < gravityWellArray.length;k++){
             gravityWellArray[k].randomPosition();
@@ -64,31 +60,68 @@ var gravityWellArray = [];
 var gravityWell = function(x,y){
     this.x = x,
     this.y = y,
-    this.r = 4,
-    this.mass = 1000,
-    this.color = "black";
+    this.r = 20,
+    this.mass = 4000,
+    this.innerHueNum = 160,
+    this.outerHueNum = 320,
+    this.innerHue1OrNeg1 = 1,
+    this.outerHue1OrNeg1 = 1,
+    this.innerColor = "blue",
+    this.outerColor = "orange";
 };
 
 gravityWell.prototype = {
     drawBall:function(){
+        var gradient = ctx.createRadialGradient(this.x,this.y,this.r*.5,this.x,this.y,this.r,this.x,this.y);
+        gradient.addColorStop(0,this.innerColor);
+        gradient.addColorStop(.8,this.outerColor);
+        gradient.addColorStop(1,this.innerColor);
         ctx.beginPath();
         ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = gradient;
         ctx.fill();
     },
     randomPosition:function(){
         this.x = Math.random()*myCanvas.width;
         this.y = Math.random()*myCanvas.height;
     },
-};
-
-function createGravitywell(event,mouseX,mouseY){
-    const key = event.key;
-    if(key == 'g'){
-        var gravityDot = new gravityWell(mouseX,mouseY);
-        gravityWellArray.push(gravityDot);
+    transitionColor:function(){
+        this.innerColor = "hsl("+this.innerHueNum+",100%,20%)";
+        this.outerColor = "hsl("+this.outerHueNum+",100%,20%)";
+        if(this.innerHueNum <= 160)
+            this.innerHue1OrNeg1 = 1;
+        else if(this.innerHueNum >= 320)
+            this.innerHue1OrNeg1 = -1;
+        if(this.outerHueNum <= 160)
+            this.outerHue1OrNeg1 = 1;
+        else if(this.outerHueNum >= 320)
+            this.outerHue1OrNeg1 = -1;
+        this.OuterHueNum += this.outerHue1OrNeg1*controls.colorSpeedRatio;        
+        this.innerHueNum += this.innerHue1OrNeg1*controls.colorSpeedRatio;
+    },
+    createGravitywell: function createGravitywell(event,mouseX,mouseY){
+        const key = event.key;
+        if(key == 'g'){
+            var gravityDot = null;
+            for(let i = 1; i < gravityWellArray.length;i++){
+                var x = gravityWellArray[i].x;
+                var y = gravityWellArray[i].y;
+                var distance = Math.sqrt(Math.pow((x - mouseX),2)+Math.pow(y-mouseY,2));
+                if(distance <= gravityWellArray[i].r){
+                    gravityWellArray[i].mass *= 1.25;
+                    gravityWellArray[i].r *= 1.25;
+                    return;
+                }
+            };
+            if(gravityDot == null){
+                gravityDot = new gravityWell(mouseX,mouseY);
+            }
+    
+            gravityWellArray.push(gravityDot);
+        }
     }
 };
+
 /*
 8888888b.     d8888 8888888b. 88888888888 8888888 .d8888b.  888      8888888888 
 888   Y88b   d88888 888   Y88b    888       888  d88P  Y88b 888      888        
@@ -102,9 +135,9 @@ function createGravitywell(event,mouseX,mouseY){
 var particleArray = [];
 
 var particle = function(){
-    this.x = Math.random()*myCanvas.width,
-    this.y = Math.random()*myCanvas.height,
-    this.r = 1.5,
+    this.x = 0,
+    this.y = 0,
+    this.r = .5,
     this.speedX = 0,
     this.speedY = 0,
     this.mass = 50,    
@@ -118,7 +151,7 @@ particle.prototype = {
         var xAccel = 0;
         var yAccel = 0;
         for(var i = 0; i < gravityWellArray.length;i++){
-            var distance = this.distance(gravityWellArray[i]) < 5 ? 200: Math.pow(this.distance(gravityWellArray[i]),2);
+            var distance = this.distance(gravityWellArray[i]) < 6 ? 100: Math.pow(this.distance(gravityWellArray[i]),2);
             xAccel += ((gravityWellArray[i].x - this.x)*gravityWellArray[i].mass/distance);
             yAccel += ((gravityWellArray[i].y - this.y)*gravityWellArray[i].mass/distance);
         }
@@ -169,6 +202,12 @@ particle.prototype = {
             else if(this.hueNum >= 360)
                 this.hue1OrNeg1 = -1;
             this.hueNum += this.hue1OrNeg1*controls.colorSpeedRatio;
+    },
+    emitterPositions:function(x,y,direction){
+        this.x = x;
+        this.y = y;
+        this.speedX = 20*direction;
+        this.speedY = 20/direction;
     }
 };
 
@@ -182,8 +221,53 @@ function particleFactory(){
     }; 
     for(let i = 0; i < controls.particleNum - particleLength; i++){
         var newParticle = new particle();
+        newParticle.randomPosition();
         particleArray.push(newParticle);
     };    
+}
+/*
+8888888888 888b     d888 888b     d888 8888888 88888888888 88888888888 8888888888 8888888b.  
+888        8888b   d8888 8888b   d8888   888       888         888     888        888   Y88b 
+888        88888b.d88888 88888b.d88888   888       888         888     888        888    888 
+8888888    888Y88888P888 888Y88888P888   888       888         888     8888888    888   d88P 
+888        888 Y888P 888 888 Y888P 888   888       888         888     888        8888888P"  
+888        888  Y8P  888 888  Y8P  888   888       888         888     888        888 T88b   
+888        888   "   888 888   "   888   888       888         888     888        888  T88b  
+8888888888 888       888 888       888 8888888     888         888     8888888888 888   T88b
+
+*/
+var emitterArray = [];
+
+function particleEmitter(x,y,direction){
+     this.x = x,
+     this.y = y,
+     this.r = 1,
+     this.direction = direction,
+     this.color = "white"
+}
+
+particleEmitter.prototype = {
+    createParticle: function(){
+        if(controls.particleNum < controls.particleMax){
+            var newParticle = new particle();
+            newParticle.emitterPositions(this.x,this.y,this.direction)
+            particleArray.push(newParticle);
+            controls.particleNum++;
+        }
+    },
+    drawBall:function(){
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+    },
+    createEmitter: function(event,mouseX,mouseY){
+        const key = event.key
+        if(key == "e"){
+            var newEmitter = new particleEmitter(mouseX,mouseY,0.5);
+            emitterArray.push(newEmitter);
+        }
+    }
 }
 
 
@@ -226,12 +310,13 @@ var player = {
     x:myCanvas.width/2,
     y:myCanvas.height/2,
     r:2.5,
-    speedX:0,
-    speedY:0,
-    mass:2000,    
+    speedX:20,
+    speedY:20,
+    mass:5000,    
     color:"black",
     drawBall: drawBall,
-    boundary: boundaryChecker
+    boundary: boundaryChecker,
+    transitionColor: function(){}
 };
 
 function triangleConnection() {
@@ -256,7 +341,7 @@ function triangleConnection() {
 */
 function mainLoop(){
     window.requestAnimationFrame(mainLoop);
-    currentTime = (new Date().getTime());
+    currentTime = performance.now();
     delta = (currentTime - lastTime) / 1000;
     player.boundary();
     for(let i = 0; i < particleArray.length;i++){
@@ -268,14 +353,21 @@ function mainLoop(){
     player.x += (player.speedX*delta);
     player.y += (player.speedY*delta);
     lastTime = currentTime;
-    ctx.fillStyle = 'rgba(132, 131, 128,0.05)';
+    ctx.fillStyle = 'rgba(0, 0, 0,0.05)';
     ctx.fillRect(0, 0, myCanvas.width ,myCanvas.height);
     //player.drawCircle();
-    for(let i = 0; i <particleArray.length;i++ ){
-        particleArray[i].drawBall();        
+    for(let j = 1; j < gravityWellArray.length; j++){
+        gravityWellArray[j].transitionColor();
     }
     for(let k = 0; k < gravityWellArray.length; k++){
         gravityWellArray[k].drawBall();
+    }
+    for(let i = 0; i <particleArray.length;i++ ){
+        particleArray[i].drawBall();        
+    }
+    for(let z = 0; z < emitterArray.length;z++){
+        emitterArray[z].drawBall();
+        emitterArray[z].createParticle();
     }
     //triangleConnection();
 };
@@ -299,7 +391,7 @@ function createGUI(){
     ball.add(player,"speedX",-1000,1000).listen();
     ball.add(player,"speedY",-1000,1000).listen();
     ball.open();
-    gui.add(controls,"particleNum",0).onChange(e => particleFactory());
+    gui.add(controls,"particleNum",0).onChange(e => particleFactory()).listen();
     gui.add(controls,"speedLimit",0);
     gui.add(controls,"colorSpeedRatio",0,2);
     gui.add(controls,"clean");
@@ -327,10 +419,12 @@ function events(){
     myCanvas.addEventListener("mousemove",e=>{onMouseMove(e)});
     myCanvas.addEventListener("mouseup",e=>{onMouseUp(e)});
     window.addEventListener("resize",e =>{adjustCanvas(e)});
-    window.addEventListener("keydown",e => {createGravitywell(e,mouseXPosition,mouseYPosition)}); 
+    window.addEventListener("keydown",e => {gravityWell.prototype.createGravitywell(e,mouseXPosition,mouseYPosition)}); 
+    window.addEventListener("keydown",e => {particleEmitter.prototype.createEmitter(e,mouseXPosition,mouseYPosition)});
 }
 
 function onMouseDown(event){
+    //console.log(Math.pow(particleArray[0].distance(gravityWellArray[0]),2));    
     var rect = myCanvas.getBoundingClientRect();
     var mouseX = event.clientX - rect.left;
     var mouseY = event.clientY - rect.top;
@@ -345,6 +439,7 @@ function onMouseMove(event){
     var rect = myCanvas.getBoundingClientRect();    
     mouseXPosition = event.clientX - rect.left;
     mouseYPosition = event.clientY - rect.top;
+    
 }
 
 function onMouseUp(event){
