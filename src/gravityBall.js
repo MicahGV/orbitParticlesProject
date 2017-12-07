@@ -4,8 +4,6 @@ var myCanvas = document.getElementById("canV"),
     ctx = null,
     lastTime = performance.now(),
     currentTime = 0,
-    requestId,
-    paused = false,
     delta = 0;    
 myCanvas.width = window.innerWidth*.95;
 myCanvas.height = window.innerHeight*.95; 
@@ -33,7 +31,7 @@ var controls = {
     particleNum: 200,
     speedLimit:20,
     colorSpeedRatio:0.10,
-    particleMax:100,
+    particleMax:200,
     randomize:function(){
         for(let i = 0; i < particleArray.length;i++){
             particleArray[i].speedX = 0;
@@ -42,6 +40,17 @@ var controls = {
         }
         for(let k = 1; k < gravityWellArray.length;k++){
             gravityWellArray[k].randomPosition();
+        }
+    },
+    start:function start() {
+        if (!requestId) {
+           requestId = window.requestAnimationFrame(mainLoop);
+        }
+    },
+    stop:function stop() {
+        if (requestId) {
+           window.cancelAnimationFrame(requestId);
+           requestId = undefined;
         }
     }
 };
@@ -60,8 +69,9 @@ var gravityWellArray = [];
 var gravityWell = function(x,y){
     this.x = x,
     this.y = y,
-    this.r = 20,
+    this.r = 10,
     this.mass = 4000,
+    this.repulse = true,        
     this.innerHueNum = 160,
     this.outerHueNum = 320,
     this.innerHue1OrNeg1 = 1,
@@ -145,15 +155,25 @@ var particle = function(){
     this.hue1OrNeg1 = 1,
     this.color = "blue";
 };
-
+/*
+TODO: ISOLATE xAccel and yAccell
+TODO: ADDING MIRRORING
+TODO: TEST GRAVITY PULSE
+*/
 particle.prototype = {
     calculateOrbitSpeed: function (delta){
         var xAccel = 0;
         var yAccel = 0;
         for(var i = 0; i < gravityWellArray.length;i++){
             var distance = this.distance(gravityWellArray[i]) < 6 ? 100: Math.pow(this.distance(gravityWellArray[i]),2);
-            xAccel += ((gravityWellArray[i].x - this.x)*gravityWellArray[i].mass/distance);
-            yAccel += ((gravityWellArray[i].y - this.y)*gravityWellArray[i].mass/distance);
+            if(gravityWellArray[i].repulse){
+                xAccel -= ((gravityWellArray[i].x - this.x)*gravityWellArray[i].mass/distance);
+                yAccel -= ((gravityWellArray[i].y - this.y)*gravityWellArray[i].mass/distance);
+            }
+            else {
+                xAccel += ((gravityWellArray[i].x - this.x)*gravityWellArray[i].mass/distance);
+                yAccel += ((gravityWellArray[i].y - this.y)*gravityWellArray[i].mass/distance);
+            }
         }
         this.speedX += xAccel*delta;
         this.speedY += yAccel*delta;
@@ -174,16 +194,16 @@ particle.prototype = {
         if(this.y >= myCanvas.height || this.y <= 0){
             this.speedY *= -.75;
         }
-    
         if(this.x < -1)
             this.x = 1;
         if(this.x > myCanvas.width+1)
             this.x = myCanvas.width-1;
     
-        if(this.y < 0)
+        if(this.y < -1)
             this.y = 1;
         if(this.y > myCanvas.height+1)
             this.y = myCanvas.height-1;
+        
     },
     drawBall:function(){
         ctx.beginPath();
@@ -194,6 +214,8 @@ particle.prototype = {
     randomPosition:function(){
         this.x = Math.random()*myCanvas.width;
         this.y = Math.random()*myCanvas.height;
+        this.speedX = 0;
+        this.speedY = 0;
     },
     transitionColor:function(){
             this.color = "hsl("+this.hueNum+",100%,50%)";
@@ -206,8 +228,8 @@ particle.prototype = {
     emitterPositions:function(x,y,direction){
         this.x = x;
         this.y = y;
-        this.speedX = 20*direction;
-        this.speedY = 20/direction;
+        this.speedX = 10*direction;
+        this.speedY = 10/direction;
     }
 };
 
@@ -264,7 +286,7 @@ particleEmitter.prototype = {
     createEmitter: function(event,mouseX,mouseY){
         const key = event.key
         if(key == "e"){
-            var newEmitter = new particleEmitter(mouseX,mouseY,0.5);
+            var newEmitter = new particleEmitter(mouseX,mouseY,1);
             emitterArray.push(newEmitter);
         }
     }
@@ -310,10 +332,11 @@ var player = {
     x:myCanvas.width/2,
     y:myCanvas.height/2,
     r:2.5,
-    speedX:20,
-    speedY:20,
+    speedX:1,
+    speedY:1,
+    repulse:false,            
     mass:5000,    
-    color:"black",
+    color:"white",
     drawBall: drawBall,
     boundary: boundaryChecker,
     transitionColor: function(){}
@@ -339,8 +362,14 @@ function triangleConnection() {
 888       888 d88P     888 8888888 888    Y888 
                                                
 */
+var requestId;
 function mainLoop(){
-    window.requestAnimationFrame(mainLoop);
+    requestId = undefined;
+    render();
+    controls.start()
+};
+
+function render(){
     currentTime = performance.now();
     delta = (currentTime - lastTime) / 1000;
     player.boundary();
@@ -369,8 +398,7 @@ function mainLoop(){
         emitterArray[z].drawBall();
         emitterArray[z].createParticle();
     }
-    //triangleConnection();
-};
+}
 
 window.onload = function(){
     if (typeof (myCanvas.getContext) !== undefined) {
@@ -385,18 +413,24 @@ window.onload = function(){
 
 
 function createGUI(){
-    var gui = new dat.GUI();
-    var ball = gui.addFolder("Ball");
-    ball.add(player,"mass",0,100000);
-    ball.add(player,"speedX",-1000,1000).listen();
-    ball.add(player,"speedY",-1000,1000).listen();
-    ball.open();
-    gui.add(controls,"particleNum",0).onChange(e => particleFactory()).listen();
-    gui.add(controls,"speedLimit",0);
-    gui.add(controls,"colorSpeedRatio",0,2);
+    var gui = new dat.GUI(),
+    movingMass = gui.addFolder("Moving Mass"),
+    particleControl = gui.addFolder("Particle Control");
+    
+   movingMass.add(player,"mass",0,100000);
+   movingMass.add(player,"speedX",-1000,1000).listen();
+   movingMass.add(player,"speedY",-1000,1000).listen();
+   movingMass.open();
+   particleControl.add(controls,"particleNum",0).onChange(e => particleFactory()).listen();
+   particleControl.add(controls,"particleMax",0);
+   particleControl.add(controls,"speedLimit",0);
+   particleControl.add(controls,"colorSpeedRatio",0,2);
+   particleControl.close()
     gui.add(controls,"clean");
     gui.add(controls,"clear");
     gui.add(controls,"randomize");
+    gui.add(controls,"start");
+    gui.add(controls,"stop");    
     gui.close();
 };
 
