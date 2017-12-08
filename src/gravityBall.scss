@@ -1,9 +1,19 @@
-#gameArea {
-    padding: 0% 0% 0 1.6%;
+.gameArea {
     //overflow:hidden;
+    //border:solid red;
+    margin:0 1% 0 1%;
 }
-#canv {
-        margin: 0 auto;
+.controlList{
+    font-family: 'Geo', sans-serif;
+    color:white;
+    margin-right:1%;  
+}
+canvas {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
 }
 body {
     background-color: black;

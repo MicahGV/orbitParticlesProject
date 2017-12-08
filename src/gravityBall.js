@@ -1,14 +1,62 @@
-
+/*jshint esversion: 6 */
+/* big ol font = Colossal 
+TODO: ADDING MIRRORING
+FIXME: Make pause dependant on one bool variable
+*/
 var myCanvas = document.getElementById("canV"),
     gameAreaId = document.getElementById("gameArea"),
     ctx = null,
     lastTime = performance.now(),
     currentTime = 0,
     delta = 0;    
-myCanvas.width = window.innerWidth*.95;
-myCanvas.height = window.innerHeight*.95; 
-//myCanvas.style.height = window.innerHeight;
-//myCanvas.style.width = window.innerWidth;
+    myCanvas.height = window.innerHeight*0.95; 
+    myCanvas.width = window.innerWidth*0.95;
+/*
+888b     d888 8888888 8888888b.  8888888b.   .d88888b.  8888888b.  
+8888b   d8888   888   888   Y88b 888   Y88b d88P" "Y88b 888   Y88b 
+88888b.d88888   888   888    888 888    888 888     888 888    888 
+888Y88888P888   888   888   d88P 888   d88P 888     888 888   d88P 
+888 Y888P 888   888   8888888P"  8888888P"  888     888 8888888P"  
+888  Y8P  888   888   888 T88b   888 T88b   888     888 888 T88b   
+888   "   888   888   888  T88b  888  T88b  Y88b. .d88P 888  T88b  
+888       888 8888888 888   T88b 888   T88b  "Y88888P"  888   T88b
+*/
+var mirrorParticles = [];
+function mirrorY(){
+    mirrorParticles = particleArray;
+    for(let j = 0; j < mirrorParticles.length; j++){
+        mirrorParticles[j].y = particleArray[i].y - myCanvas.height/2;
+        mirrorParticles.speedY = particleArray[i].speedY* -1;
+        particleArray[i].boundaryChecker = function(){
+            if(this.x >= myCanvas.width || this.x <= 0){
+                this.speedX *= -1;
+            }
+            if(this.y >= myCanvas.height/2 || this.y <= 0){
+                this.speedY *= -1;
+            }
+            if(this.x < -1)
+                this.x = 1;
+            if(this.x > myCanvas.width+1)
+                this.x = myCanvas.width-1;
+        
+            if(this.y < -1)
+                this.y = 1;
+            if(this.y > myCanvas.height/2+1)
+                this.y = myCanvas.height-1;
+        }
+    }
+}
+
+function updateAndDrawMirroredY(){
+    for(let i = 0; i < mirrorParticles.length; i++){
+        mirrorParticles[i].speedY = particleArray[i].speedY *-1;
+        ctx.beginPath();
+        ctx.arc(mirrorParticles[i].x,mirrorParticles[i].y,mirrorParticles[i].r,0,Math.PI*2);
+        ctx.fillStyle = mirrorParticles[i].color;
+        ctx.fill();
+    }
+}
+
 /*
 888b     d888 8888888 .d8888b.   .d8888b.  
 8888b   d8888   888  d88P  Y88b d88P  Y88b 
@@ -32,14 +80,20 @@ var controls = {
     speedLimit:20,
     colorSpeedRatio:0.10,
     particleMax:200,
+    mouseRepulse:false,
+    mirroredY:false,
+    isolateX:false,
+    isolateY:false,
+    boundary:false,
+    paused:false,
     randomize:function(){
         for(let i = 0; i < particleArray.length;i++){
             particleArray[i].speedX = 0;
             particleArray[i].speedY = 0;            
-            particleArray[i].randomPosition();
+            particleArray[i].randomizeParticles();
         }
         for(let k = 1; k < gravityWellArray.length;k++){
-            gravityWellArray[k].randomPosition();
+            gravityWellArray[k].randomizeParticles();
         }
     },
     start:function start() {
@@ -54,6 +108,9 @@ var controls = {
         }
     }
 };
+
+
+
 
 /* 
  .d8888b.  8888888b.         d8888 888     888 8888888 88888888888 Y88b   d88P      888       888 8888888888 888      888      888      
@@ -82,16 +139,16 @@ var gravityWell = function(x,y){
 
 gravityWell.prototype = {
     drawBall:function(){
-        var gradient = ctx.createRadialGradient(this.x,this.y,this.r*.5,this.x,this.y,this.r,this.x,this.y);
+        var gradient = ctx.createRadialGradient(this.x,this.y,this.r*0.5,this.x,this.y,this.r,this.x,this.y);
         gradient.addColorStop(0,this.innerColor);
-        gradient.addColorStop(.8,this.outerColor);
+        gradient.addColorStop(0.8,this.outerColor);
         gradient.addColorStop(1,this.innerColor);
         ctx.beginPath();
         ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
         ctx.fillStyle = gradient;
         ctx.fill();
     },
-    randomPosition:function(){
+    randomizeParticles:function(){
         this.x = Math.random()*myCanvas.width;
         this.y = Math.random()*myCanvas.height;
     },
@@ -122,7 +179,7 @@ gravityWell.prototype = {
                     gravityWellArray[i].r *= 1.25;
                     return;
                 }
-            };
+            }
             if(gravityDot == null){
                 gravityDot = new gravityWell(mouseX,mouseY);
             }
@@ -147,7 +204,7 @@ var particleArray = [];
 var particle = function(){
     this.x = 0,
     this.y = 0,
-    this.r = .5,
+    this.r = 0.5,
     this.speedX = 0,
     this.speedY = 0,
     this.mass = 50,    
@@ -155,11 +212,7 @@ var particle = function(){
     this.hue1OrNeg1 = 1,
     this.color = "blue";
 };
-/*
-TODO: ISOLATE xAccel and yAccell
-TODO: ADDING MIRRORING
-TODO: TEST GRAVITY PULSE
-*/
+
 particle.prototype = {
     calculateOrbitSpeed: function (delta){
         var xAccel = 0;
@@ -177,8 +230,12 @@ particle.prototype = {
         }
         this.speedX += xAccel*delta;
         this.speedY += yAccel*delta;
-        this.x += this.speedX;
-        this.y += this.speedY;
+        
+        if(!controls.isolateY)        
+            this.x += this.speedX;
+        if(!controls.isolateX)        
+            this.y += this.speedY;
+
         if(Math.abs(this.speedX) > controls.speedLimit)
             this.speedX = this.speedX < 0? -controls.speedLimit: controls.speedLimit;
         if(Math.abs(this.speedY) > controls.speedLimit)
@@ -189,10 +246,10 @@ particle.prototype = {
     },
     boundaryChecker: function(){
         if(this.x >= myCanvas.width || this.x <= 0){
-            this.speedX *= -.75;
+            this.speedX *= -1;
         }
         if(this.y >= myCanvas.height || this.y <= 0){
-            this.speedY *= -.75;
+            this.speedY *= -1;
         }
         if(this.x < -1)
             this.x = 1;
@@ -203,7 +260,6 @@ particle.prototype = {
             this.y = 1;
         if(this.y > myCanvas.height+1)
             this.y = myCanvas.height-1;
-        
     },
     drawBall:function(){
         ctx.beginPath();
@@ -211,7 +267,7 @@ particle.prototype = {
         ctx.fillStyle = this.color;
         ctx.fill();
     },
-    randomPosition:function(){
+    randomizeParticles:function(){
         this.x = Math.random()*myCanvas.width;
         this.y = Math.random()*myCanvas.height;
         this.speedX = 0;
@@ -240,12 +296,12 @@ function particleFactory(){
         for(;num > 0;num--){
             particleArray.pop();
         }
-    }; 
+    }
     for(let i = 0; i < controls.particleNum - particleLength; i++){
         var newParticle = new particle();
-        newParticle.randomPosition();
+        newParticle.randomizeParticles();
         particleArray.push(newParticle);
-    };    
+    }
 }
 /*
 8888888888 888b     d888 888b     d888 8888888 88888888888 88888888888 8888888888 8888888b.  
@@ -265,14 +321,14 @@ function particleEmitter(x,y,direction){
      this.y = y,
      this.r = 1,
      this.direction = direction,
-     this.color = "white"
+     this.color = 'white';
 }
 
 particleEmitter.prototype = {
     createParticle: function(){
         if(controls.particleNum < controls.particleMax){
             var newParticle = new particle();
-            newParticle.emitterPositions(this.x,this.y,this.direction)
+            newParticle.emitterPositions(this.x,this.y,this.direction);
             particleArray.push(newParticle);
             controls.particleNum++;
         }
@@ -284,13 +340,13 @@ particleEmitter.prototype = {
         ctx.fill();
     },
     createEmitter: function(event,mouseX,mouseY){
-        const key = event.key
+        const key = event.key;
         if(key == "e"){
             var newEmitter = new particleEmitter(mouseX,mouseY,1);
             emitterArray.push(newEmitter);
         }
     }
-}
+};
 
 
 /*
@@ -307,7 +363,7 @@ var drawBall = function(){
     ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
     ctx.fillStyle = this.color;
     ctx.fill();
-}
+};
 
 var boundaryChecker = function(){
     if(this.x >= myCanvas.width || this.x <= 0){
@@ -349,7 +405,7 @@ function triangleConnection() {
     ctx.lineTo(player.x,particle.y);
     ctx.lineTo(particle.x,particle.y);
     ctx.stroke();
-};
+}
 
 /*
 888b     d888        d8888 8888888 888b    888 
@@ -366,18 +422,19 @@ var requestId;
 function mainLoop(){
     requestId = undefined;
     render();
-    controls.start()
-};
+    controls.start();
+}
 
 function render(){
     currentTime = performance.now();
     delta = (currentTime - lastTime) / 1000;
     player.boundary();
     for(let i = 0; i < particleArray.length;i++){
-        particleArray[i].boundaryChecker();        
+        if(controls.boundary)
+            particleArray[i].boundaryChecker();        
         particleArray[i].calculateOrbitSpeed(delta);
         particleArray[i].transitionColor();
-    };
+    }
     //particleArray[0].calculateOrbitSpeed(delta);
     player.x += (player.speedX*delta);
     player.y += (player.speedY*delta);
@@ -393,6 +450,8 @@ function render(){
     }
     for(let i = 0; i <particleArray.length;i++ ){
         particleArray[i].drawBall();        
+        if(controls.mirroredY)
+            updateAndDrawMirroredY();
     }
     for(let z = 0; z < emitterArray.length;z++){
         emitterArray[z].drawBall();
@@ -415,24 +474,27 @@ window.onload = function(){
 function createGUI(){
     var gui = new dat.GUI(),
     movingMass = gui.addFolder("Moving Mass"),
-    particleControl = gui.addFolder("Particle Control");
-    
-   movingMass.add(player,"mass",0,100000);
-   movingMass.add(player,"speedX",-1000,1000).listen();
-   movingMass.add(player,"speedY",-1000,1000).listen();
-   movingMass.open();
-   particleControl.add(controls,"particleNum",0).onChange(e => particleFactory()).listen();
-   particleControl.add(controls,"particleMax",0);
-   particleControl.add(controls,"speedLimit",0);
-   particleControl.add(controls,"colorSpeedRatio",0,2);
-   particleControl.close()
-    gui.add(controls,"clean");
-    gui.add(controls,"clear");
-    gui.add(controls,"randomize");
+    particleControl = gui.addFolder("Particle Control"),
+    board = gui.addFolder("Board Control");
+    movingMass.add(player,"mass",0,100000);
+    movingMass.add(player,"speedX",-1000,1000).listen();
+    movingMass.add(player,"speedY",-1000,1000).listen();
+    movingMass.add(player,"repulse");
+    particleControl.add(controls,"particleMax",0);
+    particleControl.add(controls,"particleNum",0).onChange(e => particleFactory()).listen();
+    particleControl.add(controls,"colorSpeedRatio",0,2);    
+    board.add(controls,"isolateX");
+    board.add(controls,"isolateY");
+    board.add(controls,"boundary");
+    board.add(controls,"clear");
+    board.add(controls,"clean");    
+    board.add(controls,"randomize");
+    board.add(controls,"mirroredY");
     gui.add(controls,"start");
     gui.add(controls,"stop");    
     gui.close();
-};
+    particleControl.add(controls,"speedLimit",0);
+}
 
 /*
 8888888888 888     888 8888888888 888b    888 88888888888 .d8888b.  
@@ -446,34 +508,64 @@ function createGUI(){
 */
 var initialX, initialY;
 
-var mouseXPosition, mouseYPosition;
+var mouseXPosition, mouseYPosition, ctrlPressed, mouseDowned;
 
 function events(){
-    myCanvas.addEventListener("mousedown",e => {onMouseDown(e)});
-    myCanvas.addEventListener("mousemove",e=>{onMouseMove(e)});
-    myCanvas.addEventListener("mouseup",e=>{onMouseUp(e)});
-    window.addEventListener("resize",e =>{adjustCanvas(e)});
-    window.addEventListener("keydown",e => {gravityWell.prototype.createGravitywell(e,mouseXPosition,mouseYPosition)}); 
-    window.addEventListener("keydown",e => {particleEmitter.prototype.createEmitter(e,mouseXPosition,mouseYPosition)});
+    myCanvas.addEventListener("mousedown",e => {onMouseDown(e);});
+    myCanvas.addEventListener("mousemove",e=>{onMouseMove(e);});
+    myCanvas.addEventListener("mouseup",e=>{onMouseUp(e);});
+    window.addEventListener("resize",e =>{adjustCanvas(e);});
+    window.addEventListener("keydown",e => {gravityWell.prototype.createGravitywell(e,mouseXPosition,mouseYPosition);}); 
+    window.addEventListener("keydown",e => {particleEmitter.prototype.createEmitter(e,mouseXPosition,mouseYPosition);});
+    window.addEventListener("keydown",e => {spaceBar(e);});
+    window.addEventListener("keydown",e => {onCtrlPressed(e);});
+    window.addEventListener("keyup", e => {onKeyUp(e);});
+}
+function spaceBar(event){
+    const key = event.key;
+    if(key == " "){
+        if(controls.paused){
+            controls.start();
+            controls.paused = false;
+        }else{
+            controls.stop();
+            controls.paused = true;
+        }
+    }
+}
+
+function onKeyUp(event){
+    ctrlPressed = false;
+}
+
+function onCtrlPressed(event){
+    const key = event.key;
+    if(key == "Control"){
+        ctrlPressed = true;
+    }
 }
 
 function onMouseDown(event){
-    //console.log(Math.pow(particleArray[0].distance(gravityWellArray[0]),2));    
     var rect = myCanvas.getBoundingClientRect();
     var mouseX = event.clientX - rect.left;
     var mouseY = event.clientY - rect.top;
     player.x = mouseX;
     player.y = mouseY;
-    initialX = mouseX;
-    initialY = mouseY;
-    player.speedX = 0;
     player.speedY = 0;    
-};
+    player.speedX = 0;
+    initialY = mouseY;
+    initialX = mouseX;
+}
 function onMouseMove(event){
     var rect = myCanvas.getBoundingClientRect();    
     mouseXPosition = event.clientX - rect.left;
     mouseYPosition = event.clientY - rect.top;
-    
+    if(ctrlPressed){
+        player.x = mouseXPosition;
+        player.y = mouseYPosition;
+        player.speedX = 0;
+        player.speedY = 0;
+    } 
 }
 
 function onMouseUp(event){
@@ -484,18 +576,18 @@ function onMouseUp(event){
     player.speedY = initialY - mouseY;   
     player.x = initialX;
     player.y = initialY;
-};
+}
 
 function adjustCanvas(event){
     // set the canvas resolution to CSS pixels (innerWidth and Height are in CSS pixels)
-    myCanvas.width = window.innerWidth*.95;
-    myCanvas.height = window.innerHeight*.95;  
-    gameAreaId.style.height = window.innerWidth*.95;
-    gameAreaId.style.width = window.innerHeight*.95;  
+    myCanvas.width = window.innerWidth*0.95;
+    myCanvas.height = window.innerHeight*0.95;  
+    gameAreaId.style.height = window.innerWidth*0.95;
+    gameAreaId.style.width = window.innerHeight*0.95;  
     // match the display size to the resolution set above
    // myCanvas.style.width = myCanvas.width + "px"; 
     //myCanvas.style.height = myCanvas.height + "px";
-};
+}
 
 /*
 
