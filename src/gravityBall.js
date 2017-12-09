@@ -1,6 +1,6 @@
 /*jshint esversion: 6 */
 /* big ol font = Colossal 
-TODO: ADDING MIRRORING
+TODO: MAKE EMITTER ALSO ADD MIRRORED PARTICLES TO THERE RESPECTIVE ARRARYS
 FIXME: Make pause dependant on one bool variable
 */
 var myCanvas = document.getElementById("canV"),
@@ -21,40 +21,159 @@ var myCanvas = document.getElementById("canV"),
 888   "   888   888   888  T88b  888  T88b  Y88b. .d88P 888  T88b  
 888       888 8888888 888   T88b 888   T88b  "Y88888P"  888   T88b
 */
-var mirrorParticles = [];
+var mirrorYParticles;
 function mirrorY(){
-    mirrorParticles = particleArray;
-    for(let j = 0; j < mirrorParticles.length; j++){
-        mirrorParticles[j].y = particleArray[i].y - myCanvas.height/2;
-        mirrorParticles.speedY = particleArray[i].speedY* -1;
-        particleArray[i].boundaryChecker = function(){
-            if(this.x >= myCanvas.width || this.x <= 0){
-                this.speedX *= -1;
-            }
-            if(this.y >= myCanvas.height/2 || this.y <= 0){
-                this.speedY *= -1;
-            }
-            if(this.x < -1)
-                this.x = 1;
-            if(this.x > myCanvas.width+1)
-                this.x = myCanvas.width-1;
-        
-            if(this.y < -1)
-                this.y = 1;
-            if(this.y > myCanvas.height/2+1)
-                this.y = myCanvas.height-1;
+    if(controls.mirroredY){
+        mirrorYParticles = JSON.parse(JSON.stringify(particleArray));
+        for(let j = 0; j < particleArray.length; j++){
+            mirroredYBoundary(particleArray[j]);   
+        }
+    } else {
+        for(let j = 0; j < particleArray.length; j++){
+           regularBoundary(particleArray[j]);   
+        }
+    }
+    player.y = myCanvas.height/2 - myCanvas.height/4;    
+    mirrorXY();    
+}
+
+var mirrorXParticles;
+function mirrorX(){
+    if(controls.mirroredX){
+        mirrorXParticles = JSON.parse(JSON.stringify(particleArray));
+        for(let j = 0; j < particleArray.length; j++){
+            mirroredXBoundary(particleArray[j]);   
+        }
+    } else {
+        for(let j = 0; j < particleArray.length; j++){
+           regularBoundary(particleArray[j]);   
+        }
+    }
+    player.X = myCanvas.width/2 - myCanvas.width/4;
+    mirrorXY();
+}
+
+var mirrorXYParticles;
+function mirrorXY(){
+    if(controls.mirroredX && controls.mirroredY){
+        mirrorXYParticles = JSON.parse(JSON.stringify(particleArray));
+        for(let j = 0; j < particleArray.length; j++){
+            mirroredXandYBoundary(particleArray[j]);   
         }
     }
 }
 
-function updateAndDrawMirroredY(){
-    for(let i = 0; i < mirrorParticles.length; i++){
-        mirrorParticles[i].speedY = particleArray[i].speedY *-1;
-        ctx.beginPath();
-        ctx.arc(mirrorParticles[i].x,mirrorParticles[i].y,mirrorParticles[i].r,0,Math.PI*2);
-        ctx.fillStyle = mirrorParticles[i].color;
-        ctx.fill();
+function mirroredXBoundary (particle){
+    particle.boundaryChecker = function(){
+        if(this.x >= myCanvas.width/2 || this.x <= 0){
+            this.speedX *= -1;
+        }
+        if(this.y >= myCanvas.height || this.y <= 0){
+            this.speedY *= -1;
+        }
+        if(this.x < -1)
+            this.x = 1;
+        if(this.x > myCanvas.width/2+1)
+            this.x = myCanvas.width/2-1;
+        
+        if(this.y < -1)
+            this.y = 1;
+        if(this.y > myCanvas.height+1)
+            this.y = myCanvas.height-1;
+    };
+}
+
+function mirroredYBoundary(particle){
+    particle.boundaryChecker = function(){
+        if(this.x >= myCanvas.width || this.x <= 0){
+        this.speedX *= -1;
     }
+    if(this.y >= myCanvas.height/2 || this.y <= 0){
+        this.speedY *= -1;
+    }
+    if(this.x < -1)
+        this.x = 1;
+    if(this.x > myCanvas.width+1)
+        this.x = myCanvas.width-1;
+        
+    if(this.y < -1)
+        this.y = 1;
+    if(this.y > myCanvas.height/2+1)
+        this.y = myCanvas.height/2-1;
+    };
+}
+
+function mirroredXandYBoundary(particle){
+    particle.boundaryChecker = function(){
+        if(this.x >= myCanvas.width/2 || this.x <= 0){
+        this.speedX *= -1;
+    }
+    if(this.y >= myCanvas.height/2 || this.y <= 0){
+        this.speedY *= -1;
+    }
+    if(this.x < -1)
+        this.x = 1;
+    if(this.x > myCanvas.width/2+1)
+        this.x = myCanvas.width/2-1;
+        
+    if(this.y < -1)
+        this.y = 1;
+    if(this.y > myCanvas.height/2+1)
+        this.y = myCanvas.height/2-1;
+    };
+}
+
+function regularBoundary(particle){
+    particle.boundaryChecker = function(){
+        if(this.x >= myCanvas.width || this.x <= 0){
+            this.speedX *= -1;
+        }
+        if(this.y >= myCanvas.height || this.y <= 0){
+            this.speedY *= -1;
+        }
+        if(this.x < -1)
+            this.x = 1;
+        if(this.x > myCanvas.width+1)
+            this.x = myCanvas.width-1;
+        
+        if(this.y < -1)
+            this.y = 1;
+        if(this.y > myCanvas.height+1)
+            this.y = myCanvas.height-1;
+    };
+}
+
+function updateAndDrawMirroredX(i){
+    mirrorXParticles[i].x = myCanvas.width - particleArray[i].x;
+    mirrorXParticles[i].y = particleArray[i].y;
+    mirrorXParticles[i].hueNum = particleArray[i].hueNum + 120;
+    //mirrorXParticles[i].transitionColor();
+    ctx.beginPath();
+    ctx.arc(mirrorXParticles[i].x,mirrorXParticles[i].y,mirrorXParticles[i].r,0,Math.PI*2);
+    ctx.fillStyle = mirrorXParticles[i].color;
+    ctx.fill();
+}
+
+function updateAndDrawMirroredY(i){
+    mirrorYParticles[i].x = particleArray[i].x;
+    mirrorYParticles[i].y = myCanvas.height - particleArray[i].y;
+    mirrorYParticles[i].hueNum = particleArray[i].hueNum + 40;
+    //mirrorYParticles[i].transitionColor();
+    ctx.beginPath();
+    ctx.arc(mirrorYParticles[i].x,mirrorYParticles[i].y,mirrorYParticles[i].r,0,Math.PI*2);
+    ctx.fillStyle = mirrorYParticles[i].color;
+    ctx.fill();
+}
+
+function updateAndDrawMirroredXY(i){
+    mirrorXYParticles[i].x = myCanvas.width - particleArray[i].x;
+    mirrorXYParticles[i].y = myCanvas.height - particleArray[i].y;
+    mirrorXYParticles[i].hueNum = particleArray[i].hueNum + 80;
+    //mirrorXYParticles[i].transitionColor();
+    ctx.beginPath();
+    ctx.arc(mirrorXYParticles[i].x,mirrorXYParticles[i].y,mirrorXYParticles[i].r,0,Math.PI*2);
+    ctx.fillStyle = mirrorXYParticles[i].color;
+    ctx.fill(); 
 }
 
 /*
@@ -82,6 +201,7 @@ var controls = {
     particleMax:200,
     mouseRepulse:false,
     mirroredY:false,
+    mirroredX:false,
     isolateX:false,
     isolateY:false,
     boundary:false,
@@ -108,9 +228,6 @@ var controls = {
         }
     }
 };
-
-
-
 
 /* 
  .d8888b.  8888888b.         d8888 888     888 8888888 88888888888 Y88b   d88P      888       888 8888888888 888      888      888      
@@ -300,6 +417,8 @@ function particleFactory(){
     for(let i = 0; i < controls.particleNum - particleLength; i++){
         var newParticle = new particle();
         newParticle.randomizeParticles();
+        if(controls.mirroredY)
+            newParticle.boundaryChecker = mirroredYBoundary();
         particleArray.push(newParticle);
     }
 }
@@ -328,6 +447,14 @@ particleEmitter.prototype = {
     createParticle: function(){
         if(controls.particleNum < controls.particleMax){
             var newParticle = new particle();
+            
+            if(controls.mirroredX && controls.mirroredY){
+                mirroredXandYBoundary(newParticle);
+            } else if(controls.mirroredX){
+                mirroredXBoundary(newParticle);
+            } else if (controls.mirroredY){
+                mirroredYBoundary(newParticle);
+            }
             newParticle.emitterPositions(this.x,this.y,this.direction);
             particleArray.push(newParticle);
             controls.particleNum++;
@@ -346,7 +473,7 @@ particleEmitter.prototype = {
             emitterArray.push(newEmitter);
         }
     }
-};
+}
 
 
 /*
@@ -439,7 +566,7 @@ function render(){
     player.x += (player.speedX*delta);
     player.y += (player.speedY*delta);
     lastTime = currentTime;
-    ctx.fillStyle = 'rgba(0, 0, 0,0.05)';
+    ctx.fillStyle = 'rgba(0, 0, 0,.03)';
     ctx.fillRect(0, 0, myCanvas.width ,myCanvas.height);
     //player.drawCircle();
     for(let j = 1; j < gravityWellArray.length; j++){
@@ -450,8 +577,15 @@ function render(){
     }
     for(let i = 0; i <particleArray.length;i++ ){
         particleArray[i].drawBall();        
-        if(controls.mirroredY)
-            updateAndDrawMirroredY();
+        if(controls.mirroredY){
+            updateAndDrawMirroredY(i);
+        }
+        if(controls.mirroredX){
+            updateAndDrawMirroredX(i);
+        }
+        if(controls.mirroredX && controls.mirroredY){
+            updateAndDrawMirroredXY(i);
+        }
     }
     for(let z = 0; z < emitterArray.length;z++){
         emitterArray[z].drawBall();
@@ -485,11 +619,12 @@ function createGUI(){
     particleControl.add(controls,"colorSpeedRatio",0,2);    
     board.add(controls,"isolateX");
     board.add(controls,"isolateY");
+    board.add(controls,"mirroredY").onChange(e => mirrorY());
+    board.add(controls,"mirroredX").onChange(e => mirrorX());    
     board.add(controls,"boundary");
     board.add(controls,"clear");
     board.add(controls,"clean");    
     board.add(controls,"randomize");
-    board.add(controls,"mirroredY");
     gui.add(controls,"start");
     gui.add(controls,"stop");    
     gui.close();
@@ -542,6 +677,10 @@ function onCtrlPressed(event){
     const key = event.key;
     if(key == "Control"){
         ctrlPressed = true;
+        player.x = mouseXPosition;
+        player.y = mouseYPosition;
+        player.speedX = 0;
+        player.speedY = 0;
     }
 }
 
@@ -561,10 +700,7 @@ function onMouseMove(event){
     mouseXPosition = event.clientX - rect.left;
     mouseYPosition = event.clientY - rect.top;
     if(ctrlPressed){
-        player.x = mouseXPosition;
-        player.y = mouseYPosition;
-        player.speedX = 0;
-        player.speedY = 0;
+        
     } 
 }
 
