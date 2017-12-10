@@ -1,6 +1,5 @@
 /*jshint esversion: 6 */
 /* big ol font = Colossal 
-TODO: MAKE EMITTER ALSO ADD MIRRORED PARTICLES TO THERE RESPECTIVE ARRARYS
 FIXME: Make pause dependant on one bool variable
 */
 var myCanvas = document.getElementById("canV"),
@@ -33,7 +32,6 @@ function mirrorY(){
            regularBoundary(particleArray[j]);   
         }
     }
-    player.y = myCanvas.height/2 - myCanvas.height/4;    
     mirrorXY();    
 }
 
@@ -49,7 +47,6 @@ function mirrorX(){
            regularBoundary(particleArray[j]);   
         }
     }
-    player.X = myCanvas.width/2 - myCanvas.width/4;
     mirrorXY();
 }
 
@@ -146,7 +143,7 @@ function regularBoundary(particle){
 function updateAndDrawMirroredX(i){
     mirrorXParticles[i].x = myCanvas.width - particleArray[i].x;
     mirrorXParticles[i].y = particleArray[i].y;
-    mirrorXParticles[i].hueNum = particleArray[i].hueNum + 120;
+    mirrorXParticles[i].color = "hsl("+(particleArray[i].hueNum - 120) +",100%,50%)";
     //mirrorXParticles[i].transitionColor();
     ctx.beginPath();
     ctx.arc(mirrorXParticles[i].x,mirrorXParticles[i].y,mirrorXParticles[i].r,0,Math.PI*2);
@@ -157,7 +154,8 @@ function updateAndDrawMirroredX(i){
 function updateAndDrawMirroredY(i){
     mirrorYParticles[i].x = particleArray[i].x;
     mirrorYParticles[i].y = myCanvas.height - particleArray[i].y;
-    mirrorYParticles[i].hueNum = particleArray[i].hueNum + 40;
+    mirrorYParticles[i].color = "hsl("+(particleArray[i].hueNum+120) +",100%,50%)";
+    
     //mirrorYParticles[i].transitionColor();
     ctx.beginPath();
     ctx.arc(mirrorYParticles[i].x,mirrorYParticles[i].y,mirrorYParticles[i].r,0,Math.PI*2);
@@ -168,8 +166,9 @@ function updateAndDrawMirroredY(i){
 function updateAndDrawMirroredXY(i){
     mirrorXYParticles[i].x = myCanvas.width - particleArray[i].x;
     mirrorXYParticles[i].y = myCanvas.height - particleArray[i].y;
-    mirrorXYParticles[i].hueNum = particleArray[i].hueNum + 80;
-    //mirrorXYParticles[i].transitionColor();
+    mirrorXYParticles[i].color = "hsl("+(particleArray[i].hueNum - 60)+",100%,50%)";
+
+    
     ctx.beginPath();
     ctx.arc(mirrorXYParticles[i].x,mirrorXYParticles[i].y,mirrorXYParticles[i].r,0,Math.PI*2);
     ctx.fillStyle = mirrorXYParticles[i].color;
@@ -195,10 +194,11 @@ var controls = {
         gravityWellArray.length = 1;
         emitterArray.length = 0;
     },
-    particleNum: 200,
+    particleNum:0,
     speedLimit:20,
     colorSpeedRatio:0.10,
-    particleMax:200,
+    EmitParticleMax:200,
+    EmitterDirection:0,
     mouseRepulse:false,
     mirroredY:false,
     mirroredX:false,
@@ -228,6 +228,10 @@ var controls = {
         }
     }
 };
+
+function toRadians(degrees){
+    return degrees * (Math.PI / 180);
+}
 
 /* 
  .d8888b.  8888888b.         d8888 888     888 8888888 88888888888 Y88b   d88P      888       888 8888888888 888      888      888      
@@ -401,8 +405,8 @@ particle.prototype = {
     emitterPositions:function(x,y,direction){
         this.x = x;
         this.y = y;
-        this.speedX = 10*direction;
-        this.speedY = 10/direction;
+        this.speedX = 10*Math.cos(direction);
+        this.speedY = 10*Math.sin(direction);
     }
 };
 
@@ -417,8 +421,21 @@ function particleFactory(){
     for(let i = 0; i < controls.particleNum - particleLength; i++){
         var newParticle = new particle();
         newParticle.randomizeParticles();
-        if(controls.mirroredY)
-            newParticle.boundaryChecker = mirroredYBoundary();
+        if(controls.mirroredX && controls.mirroredY){
+            mirroredXandYBoundary(newParticle);
+            var newXYParticle = JSON.parse(JSON.stringify(newParticle));
+            mirrorXYParticles.push(newXYParticle);
+            mirrorXParticles.push(newXYParticle);
+            mirrorYParticles.push(newXYParticle);
+        } else if(controls.mirroredX){
+            mirroredXBoundary(newParticle);
+            var newXParticle = JSON.parse(JSON.stringify(newParticle));
+            mirrorXParticles.push(newXParticle);
+        } else if (controls.mirroredY){
+            mirroredYBoundary(newParticle);
+            var newYParticle = JSON.parse(JSON.stringify(newParticle));
+            mirrorYParticles.push(newYParticle);
+        }
         particleArray.push(newParticle);
     }
 }
@@ -445,17 +462,24 @@ function particleEmitter(x,y,direction){
 
 particleEmitter.prototype = {
     createParticle: function(){
-        if(controls.particleNum < controls.particleMax){
+        if(controls.particleNum < controls.EmitParticleMax){
             var newParticle = new particle();
-            
+            newParticle.emitterPositions(this.x,this.y,toRadians(-1*controls.EmitterDirection));
             if(controls.mirroredX && controls.mirroredY){
                 mirroredXandYBoundary(newParticle);
+                var newXYParticle = JSON.parse(JSON.stringify(newParticle));
+                mirrorXYParticles.push(newXYParticle);
+                mirrorXParticles.push(newXYParticle);
+                mirrorYParticles.push(newXYParticle);
             } else if(controls.mirroredX){
                 mirroredXBoundary(newParticle);
+                var newXParticle = JSON.parse(JSON.stringify(newParticle));
+                mirrorXParticles.push(newXParticle);
             } else if (controls.mirroredY){
                 mirroredYBoundary(newParticle);
+                var newYParticle = JSON.parse(JSON.stringify(newParticle));
+                mirrorYParticles.push(newYParticle);
             }
-            newParticle.emitterPositions(this.x,this.y,this.direction);
             particleArray.push(newParticle);
             controls.particleNum++;
         }
@@ -518,7 +542,7 @@ var player = {
     speedX:1,
     speedY:1,
     repulse:false,            
-    mass:5000,    
+    mass:8000,    
     color:"white",
     drawBall: drawBall,
     boundary: boundaryChecker,
@@ -562,13 +586,11 @@ function render(){
         particleArray[i].calculateOrbitSpeed(delta);
         particleArray[i].transitionColor();
     }
-    //particleArray[0].calculateOrbitSpeed(delta);
     player.x += (player.speedX*delta);
     player.y += (player.speedY*delta);
     lastTime = currentTime;
-    ctx.fillStyle = 'rgba(0, 0, 0,.03)';
+    ctx.fillStyle = 'rgba(0, 0, 0,.05)';
     ctx.fillRect(0, 0, myCanvas.width ,myCanvas.height);
-    //player.drawCircle();
     for(let j = 1; j < gravityWellArray.length; j++){
         gravityWellArray[j].transitionColor();
     }
@@ -599,7 +621,8 @@ window.onload = function(){
         createGUI();
         events();
         gravityWellArray.push(player);
-        particleFactory();
+        emitterArray.push(new particleEmitter(myCanvas.width/4,myCanvas.height/4,0));
+        emitterArray.push(new particleEmitter(myCanvas.width - myCanvas.width/4,myCanvas.height - myCanvas.height/4,0));
         mainLoop();
     }
 };
@@ -611,12 +634,14 @@ function createGUI(){
     particleControl = gui.addFolder("Particle Control"),
     board = gui.addFolder("Board Control");
     movingMass.add(player,"mass",0,100000);
-    movingMass.add(player,"speedX",-1000,1000).listen();
-    movingMass.add(player,"speedY",-1000,1000).listen();
+    movingMass.add(player,"speedX").listen();
+    movingMass.add(player,"speedY").listen();
     movingMass.add(player,"repulse");
-    particleControl.add(controls,"particleMax",0);
-    particleControl.add(controls,"particleNum",0).onChange(e => particleFactory()).listen();
+    particleControl.add(controls,"EmitParticleMax",0);
+    particleControl.add(controls,"EmitterDirection",0,360).onChange(emitterArray.forEach(e =>{e.direction = toRadians(-1*controls.EmitterDirection);}));
+    particleControl.add(controls,"particleNum",0,4000).onChange(e => particleFactory()).listen();
     particleControl.add(controls,"colorSpeedRatio",0,2);    
+    particleControl.add(controls,"speedLimit",0,60);
     board.add(controls,"isolateX");
     board.add(controls,"isolateY");
     board.add(controls,"mirroredY").onChange(e => mirrorY());
@@ -627,8 +652,8 @@ function createGUI(){
     board.add(controls,"randomize");
     gui.add(controls,"start");
     gui.add(controls,"stop");    
-    gui.close();
-    particleControl.add(controls,"speedLimit",0);
+    gui.open();
+   
 }
 
 /*
@@ -715,14 +740,9 @@ function onMouseUp(event){
 }
 
 function adjustCanvas(event){
-    // set the canvas resolution to CSS pixels (innerWidth and Height are in CSS pixels)
     myCanvas.width = window.innerWidth*0.95;
-    myCanvas.height = window.innerHeight*0.95;  
-    gameAreaId.style.height = window.innerWidth*0.95;
-    gameAreaId.style.width = window.innerHeight*0.95;  
-    // match the display size to the resolution set above
-   // myCanvas.style.width = myCanvas.width + "px"; 
-    //myCanvas.style.height = myCanvas.height + "px";
+    myCanvas.height = window.innerHeight*0.95;
+
 }
 
 /*
