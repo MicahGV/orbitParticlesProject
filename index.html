@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Particle Project</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="./src/gravityBall.scss">
+        <link href="https://fonts.googleapis.com/css?family=Geo" rel="stylesheet">
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+        <div class="gameArea">
+            <canvas id ="canV" Sclass= "canC" width=400 height=400>Dont you think its about time to get a new browser</canvas>
+            <div></div>
+            <span class="controlList">Press E for emitter</span>
+            <span class="controlList">Press G for repulser</span>
+            <span class="controlList">Click and drag to launch Mass ball</span> 
+            <span class="controlList">Press ctrl for mouse control</span>  
+            <span class="controlList">Press space to stop and start</span> 
+            <span class="controlList">Press clear in the menu to remove emitters and repulsers</span>        
+        </div>
+    </body>
+    <script src="./dependecies/dat.gui.min.js"></script>
+    <script src="./src/gravityBall.js"></script>
+</html>
