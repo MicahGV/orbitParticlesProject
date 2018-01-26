@@ -146,7 +146,7 @@ function updateAndDrawMirroredX(i){
     mirrorXParticles[i].color = "hsl("+(particleArray[i].hueNum - 120) +",100%,50%)";
     //mirrorXParticles[i].transitionColor();
     ctx.beginPath();
-    ctx.arc(mirrorXParticles[i].x,mirrorXParticles[i].y,mirrorXParticles[i].r,0,Math.PI*2);
+    ctx.arc(mirrorXParticles[i].x,mirrorXParticles[i].y,controls.particleSize,0,Math.PI*2);
     ctx.fillStyle = mirrorXParticles[i].color;
     ctx.fill();
 }
@@ -158,7 +158,7 @@ function updateAndDrawMirroredY(i){
     
     //mirrorYParticles[i].transitionColor();
     ctx.beginPath();
-    ctx.arc(mirrorYParticles[i].x,mirrorYParticles[i].y,mirrorYParticles[i].r,0,Math.PI*2);
+    ctx.arc(mirrorYParticles[i].x,mirrorYParticles[i].y,controls.particleSize,0,Math.PI*2);
     ctx.fillStyle = mirrorYParticles[i].color;
     ctx.fill();
 }
@@ -170,7 +170,7 @@ function updateAndDrawMirroredXY(i){
 
     
     ctx.beginPath();
-    ctx.arc(mirrorXYParticles[i].x,mirrorXYParticles[i].y,mirrorXYParticles[i].r,0,Math.PI*2);
+    ctx.arc(mirrorXYParticles[i].x,mirrorXYParticles[i].y,controls.particleSize,0,Math.PI*2);
     ctx.fillStyle = mirrorXYParticles[i].color;
     ctx.fill(); 
 }
@@ -195,10 +195,12 @@ var controls = {
         emitterArray.length = 0;
     },
     particleNum:0,
+    particleSize:0.5,
     speedLimit:20,
     colorSpeedRatio:0.10,
     EmitParticleMax:200,
     EmitterDirection:0,
+    EmitterSpeed:10,
     mouseRepulse:false,
     mirroredY:false,
     mirroredX:false,
@@ -325,7 +327,6 @@ var particleArray = [];
 var particle = function(){
     this.x = 0,
     this.y = 0,
-    this.r = 0.5,
     this.speedX = 0,
     this.speedY = 0,
     this.mass = 50,    
@@ -384,7 +385,7 @@ particle.prototype = {
     },
     drawBall:function(){
         ctx.beginPath();
-        ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+        ctx.arc(this.x,this.y,controls.particleSize,0,Math.PI*2);
         ctx.fillStyle = this.color;
         ctx.fill();
     },
@@ -405,8 +406,8 @@ particle.prototype = {
     emitterPositions:function(x,y,direction){
         this.x = x;
         this.y = y;
-        this.speedX = 10*Math.cos(direction);
-        this.speedY = 10*Math.sin(direction);
+        this.speedX = controls.EmitterSpeed*Math.cos(direction);
+        this.speedY = controls.EmitterSpeed*Math.sin(direction);
     }
 };
 
@@ -639,7 +640,9 @@ function createGUI(){
     movingMass.add(player,"repulse");
     particleControl.add(controls,"EmitParticleMax",0);
     particleControl.add(controls,"EmitterDirection",0,360).onChange(emitterArray.forEach(e =>{e.direction = toRadians(-1*controls.EmitterDirection);}));
+    particleControl.add(controls,"EmitterSpeed",0,1000);
     particleControl.add(controls,"particleNum",0,4000).onChange(e => particleFactory()).listen();
+    particleControl.add(controls,"particleSize",0.04,200);
     particleControl.add(controls,"colorSpeedRatio",0,2);    
     particleControl.add(controls,"speedLimit",0,60);
     board.add(controls,"isolateX");
