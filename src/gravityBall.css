@@ -15,4 +15,5 @@ canvas {
 }
 body {
     background-color: black;
+    overflow: hidden;
 }
