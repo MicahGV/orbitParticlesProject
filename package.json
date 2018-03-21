@@ -1,0 +1,23 @@
+{
+  "name": "orbitparticlesproject",
+  "version": "1.0.0",
+  "description": "A basic Orbital Project",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "live-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MicahGV/orbitParticlesProject.git"
+  },
+  "author": "MicahGV",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MicahGV/orbitParticlesProject/issues"
+  },
+  "homepage": "https://github.com/MicahGV/orbitParticlesProject#readme",
+  "devDependencies": {
+    "live-server": "^1.2.0"
+  }
+}

@@ -24,11 +24,11 @@ var mirrorYParticles;
 function mirrorY(){
     if(controls.mirroredY){
         mirrorYParticles = JSON.parse(JSON.stringify(particleArray));
-        for(let j = 0; j < particleArray.length; j++){
+        for(var j = 0; j < particleArray.length; j++){
             mirroredYBoundary(particleArray[j]);   
         }
     } else {
-        for(let j = 0; j < particleArray.length; j++){
+        for(var j = 0; j < particleArray.length; j++){
            regularBoundary(particleArray[j]);   
         }
     }
@@ -39,11 +39,11 @@ var mirrorXParticles;
 function mirrorX(){
     if(controls.mirroredX){
         mirrorXParticles = JSON.parse(JSON.stringify(particleArray));
-        for(let j = 0; j < particleArray.length; j++){
+        for(var j = 0; j < particleArray.length; j++){
             mirroredXBoundary(particleArray[j]);   
         }
     } else {
-        for(let j = 0; j < particleArray.length; j++){
+        for(var j = 0; j < particleArray.length; j++){
            regularBoundary(particleArray[j]);   
         }
     }
@@ -54,7 +54,7 @@ var mirrorXYParticles;
 function mirrorXY(){
     if(controls.mirroredX && controls.mirroredY){
         mirrorXYParticles = JSON.parse(JSON.stringify(particleArray));
-        for(let j = 0; j < particleArray.length; j++){
+        for(var j = 0; j < particleArray.length; j++){
             mirroredXandYBoundary(particleArray[j]);   
         }
     }
@@ -195,7 +195,13 @@ var controls = {
         emitterArray.length = 0;
     },
     particleNum:0,
-    particleSize:0.5,
+    particleSize:1,
+    observedParticleSize:1,
+    pulseNum: 0.2,
+    pulseMax: 10,
+    pulseMin:1,
+    pulseOn: false,
+    pulseNegOrPos:1,
     speedLimit:20,
     colorSpeedRatio:0.10,
     EmitParticleMax:200,
@@ -209,12 +215,12 @@ var controls = {
     boundary:false,
     paused:false,
     randomize:function(){
-        for(let i = 0; i < particleArray.length;i++){
+        for(var i = 0; i < particleArray.length;i++){
             particleArray[i].speedX = 0;
             particleArray[i].speedY = 0;            
             particleArray[i].randomizeParticles();
         }
-        for(let k = 1; k < gravityWellArray.length;k++){
+        for(var k = 1; k < gravityWellArray.length;k++){
             gravityWellArray[k].randomizeParticles();
         }
     },
@@ -228,6 +234,16 @@ var controls = {
            window.cancelAnimationFrame(requestId);
            requestId = undefined;
         }
+    },
+    particlePulse:function(){
+        if(controls.particleSize >= controls.pulseMax) {
+            controls.pulseNegOrPos = -1;
+        }
+        else if (controls.particleSize <= controls.pulseMin) {
+            controls.pulseNegOrPos = 1;
+        }
+        
+        controls.particleSize += controls.pulseNum*controls.pulseNegOrPos;
     }
 };
 
@@ -289,26 +305,22 @@ gravityWell.prototype = {
         this.OuterHueNum += this.outerHue1OrNeg1*controls.colorSpeedRatio;        
         this.innerHueNum += this.innerHue1OrNeg1*controls.colorSpeedRatio;
     },
-    createGravitywell: function createGravitywell(event,mouseX,mouseY){
-        const key = event.key;
-        if(key == 'g'){
-            var gravityDot = null;
-            for(let i = 1; i < gravityWellArray.length;i++){
-                var x = gravityWellArray[i].x;
-                var y = gravityWellArray[i].y;
-                var distance = Math.sqrt(Math.pow((x - mouseX),2)+Math.pow(y-mouseY,2));
-                if(distance <= gravityWellArray[i].r){
-                    gravityWellArray[i].mass *= 1.25;
-                    gravityWellArray[i].r *= 1.25;
-                    return;
-                }
+    createGravitywell: function createGravitywell(mouseX,mouseY){
+        var gravityDot = null;
+        for(var i = 1; i < gravityWellArray.length;i++){
+            var x = gravityWellArray[i].x;
+            var y = gravityWellArray[i].y;
+            var distance = Math.sqrt(Math.pow((x - mouseX),2)+Math.pow(y-mouseY,2));
+            if(distance <= gravityWellArray[i].r){
+                gravityWellArray[i].mass *= 1.25;
+                gravityWellArray[i].r *= 1.25;
+                return;
             }
-            if(gravityDot == null){
-                gravityDot = new gravityWell(mouseX,mouseY);
-            }
-    
-            gravityWellArray.push(gravityDot);
         }
+        if(gravityDot == null){
+            gravityDot = new gravityWell(mouseX,mouseY);
+        }    
+        gravityWellArray.push(gravityDot);
     }
 };
 
@@ -332,7 +344,8 @@ var particle = function(){
     this.mass = 50,    
     this.hueNum = 0,
     this.hue1OrNeg1 = 1,
-    this.color = "blue";
+    this.pulseNum = 1,
+    this.color = "blue"
 };
 
 particle.prototype = {
@@ -408,7 +421,8 @@ particle.prototype = {
         this.y = y;
         this.speedX = controls.EmitterSpeed*Math.cos(direction);
         this.speedY = controls.EmitterSpeed*Math.sin(direction);
-    }
+    },
+
 };
 
 function particleFactory(){
@@ -419,7 +433,7 @@ function particleFactory(){
             particleArray.pop();
         }
     }
-    for(let i = 0; i < controls.particleNum - particleLength; i++){
+    for(var i = 0; i < controls.particleNum - particleLength; i++){
         var newParticle = new particle();
         newParticle.randomizeParticles();
         if(controls.mirroredX && controls.mirroredY){
@@ -491,12 +505,9 @@ particleEmitter.prototype = {
         ctx.fillStyle = this.color;
         ctx.fill();
     },
-    createEmitter: function(event,mouseX,mouseY){
-        const key = event.key;
-        if(key == "e"){
-            var newEmitter = new particleEmitter(mouseX,mouseY,1);
-            emitterArray.push(newEmitter);
-        }
+    createEmitter: function(mouseX,mouseY){
+        var newEmitter = new particleEmitter(mouseX,mouseY,1);
+        emitterArray.push(newEmitter);
     }
 }
 
@@ -581,25 +592,13 @@ function render(){
     currentTime = performance.now();
     delta = (currentTime - lastTime) / 1000;
     player.boundary();
-    for(let i = 0; i < particleArray.length;i++){
-        if(controls.boundary)
-            particleArray[i].boundaryChecker();        
-        particleArray[i].calculateOrbitSpeed(delta);
-        particleArray[i].transitionColor();
-    }
-    player.x += (player.speedX*delta);
-    player.y += (player.speedY*delta);
-    lastTime = currentTime;
-    ctx.fillStyle = 'rgba(0, 0, 0,.05)';
-    ctx.fillRect(0, 0, myCanvas.width ,myCanvas.height);
-    for(let j = 1; j < gravityWellArray.length; j++){
-        gravityWellArray[j].transitionColor();
-    }
-    for(let k = 0; k < gravityWellArray.length; k++){
-        gravityWellArray[k].drawBall();
-    }
-    for(let i = 0; i <particleArray.length;i++ ){
-        particleArray[i].drawBall();        
+    let particleArrayLength = particleArray.length;
+    for(var i = 0; i < particleArrayLength;i++){
+        var particle = particleArray[i];
+        if(controls.boundary) particle.boundaryChecker();        
+        particle.calculateOrbitSpeed(delta);
+        particle.transitionColor();
+        particle.drawBall();
         if(controls.mirroredY){
             updateAndDrawMirroredY(i);
         }
@@ -609,8 +608,24 @@ function render(){
         if(controls.mirroredX && controls.mirroredY){
             updateAndDrawMirroredXY(i);
         }
+    }    
+
+    if(controls.pulseOn){
+        controls.particlePulse();
     }
-    for(let z = 0; z < emitterArray.length;z++){
+
+    player.x += (player.speedX*delta);
+    player.y += (player.speedY*delta);
+    lastTime = currentTime;
+    ctx.fillStyle = 'rgba(0, 0, 0,.05)';
+    ctx.fillRect(0, 0, myCanvas.width ,myCanvas.height);
+    let gravityWellLength = gravityWellArray.length;
+    for(var j = 1; j < gravityWellLength; j++){
+        gravityWellArray[j].transitionColor();
+        gravityWellArray[k].drawBall();
+    }
+    let emitterLength = emitterArray.length;
+    for(var z = 0; z < emitterLength ;z++){
         emitterArray[z].drawBall();
         emitterArray[z].createParticle();
     }
@@ -634,6 +649,7 @@ function createGUI(){
     movingMass = gui.addFolder("Moving Mass"),
     particleControl = gui.addFolder("Particle Control"),
     board = gui.addFolder("Board Control");
+    pulse = gui.addFolder("Pulse Control")
     movingMass.add(player,"mass",0,100000);
     movingMass.add(player,"speedX").listen();
     movingMass.add(player,"speedY").listen();
@@ -641,10 +657,16 @@ function createGUI(){
     particleControl.add(controls,"EmitParticleMax",0);
     particleControl.add(controls,"EmitterDirection",0,360).onChange(emitterArray.forEach(e =>{e.direction = toRadians(-1*controls.EmitterDirection);}));
     particleControl.add(controls,"EmitterSpeed",0,1000);
-    particleControl.add(controls,"particleNum",0,4000).onChange(e => particleFactory()).listen();
-    particleControl.add(controls,"particleSize",0.04,200);
+    
+    particleControl.add(controls,"particleNum",0,4000).onChange(e => {particleFactory();}).listen();
+
+    particleControl.add(controls,"particleSize",0.04,200).listen();
     particleControl.add(controls,"colorSpeedRatio",0,2);    
     particleControl.add(controls,"speedLimit",0,60);
+    pulse.add(controls, "pulseMax",1,200);
+    pulse.add(controls, "pulseMin",0,200);
+    pulse.add(controls, "pulseNum",0,1);
+    pulse.add(controls, "pulseOn");
     board.add(controls,"isolateX");
     board.add(controls,"isolateY");
     board.add(controls,"mirroredY").onChange(e => mirrorY());
@@ -678,31 +700,28 @@ function events(){
     myCanvas.addEventListener("mousemove",e=>{onMouseMove(e);});
     myCanvas.addEventListener("mouseup",e=>{onMouseUp(e);});
     window.addEventListener("resize",e =>{adjustCanvas(e);});
-    window.addEventListener("keydown",e => {gravityWell.prototype.createGravitywell(e,mouseXPosition,mouseYPosition);}); 
-    window.addEventListener("keydown",e => {particleEmitter.prototype.createEmitter(e,mouseXPosition,mouseYPosition);});
-    window.addEventListener("keydown",e => {spaceBar(e);});
-    window.addEventListener("keydown",e => {onCtrlPressed(e);});
+    window.addEventListener("keydown",e => {keyDownEventHandler(e)}); 
     window.addEventListener("keyup", e => {onKeyUp(e);});
 }
-function spaceBar(event){
+
+
+function keyDownEventHandler(e) {
     const key = event.key;
+
+    //Spacebar pausing
     if(key == " "){
         if(controls.paused){
             controls.start();
             controls.paused = false;
         }else{
+            currentTime = 0;
+            lastTime = performance.now();
             controls.stop();
             controls.paused = true;
         }
     }
-}
 
-function onKeyUp(event){
-    ctrlPressed = false;
-}
-
-function onCtrlPressed(event){
-    const key = event.key;
+    //Mouse moving
     if(key == "Control"){
         ctrlPressed = true;
         player.x = mouseXPosition;
@@ -710,6 +729,19 @@ function onCtrlPressed(event){
         player.speedX = 0;
         player.speedY = 0;
     }
+
+    if(key == "g") {
+        gravityWell.prototype.createGravitywell(mouseXPosition,mouseYPosition);
+    }
+
+    if(key == "e") {
+        particleEmitter.prototype.createEmitter(mouseXPosition,mouseYPosition);
+    }
+}
+
+
+function onKeyUp(event){
+    ctrlPressed = false;
 }
 
 function onMouseDown(event){
